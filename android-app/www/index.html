@@ -4793,6 +4793,19 @@ function offScore(p, qNorm) {
   s += Math.min(15, Math.log10(p.popularite + 1) * 6);
   return s;
 }
+// Évite qu'une seule marque très présente sur OFF (ex. beaucoup de scans "Jaouda") monopolise
+// tous les résultats : on plafonne le nombre d'entrées par marque. Si ça donne moins de
+// résultats que le maximum affichable, c'est voulu — mieux vaut peu de choix variés
+// qu'une liste remplie de produits quasi identiques de la même marque.
+function diversifierParMarque(items, maxParMarque, total) {
+  const compte = {}; const gardes = [];
+  for (const p of items) {
+    const m = normaliserNom(p.marque || '—');
+    if ((compte[m] || 0) < maxParMarque) { compte[m] = (compte[m] || 0) + 1; gardes.push(p); }
+    if (gardes.length >= total) break;
+  }
+  return gardes;
+}
 async function rechercherAliment(q) {
   offMsg(`<p class="desc">Recherche en cours…</p>`);
   try {
@@ -4809,7 +4822,7 @@ async function rechercherAliment(q) {
       vus.add(cle); return true;
     });
     items.sort((a, b) => offScore(b, qNorm) - offScore(a, qNorm));
-    renderResultatsOff(items.slice(0, 30));
+    renderResultatsOff(diversifierParMarque(items, 3, 30));
   } catch (e) {
     offMsg(`<p class="empty">Impossible de joindre OpenFoodFacts. Vérifie ta connexion.</p>`);
   }
