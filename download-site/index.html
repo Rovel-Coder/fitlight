@@ -94,10 +94,18 @@
   .privacy-item p{margin:0; color:var(--muted); font-size:0.88rem;}
 
   /* Download card */
+  .download-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:18px;
+    max-width:760px; margin:0 auto;
+  }
   .download-card{
-    max-width:460px; margin:0 auto; background:var(--card);
+    background:var(--card);
     border:1px solid var(--border); border-radius:16px; padding:32px 28px;
     text-align:center;
+  }
+  .download-card .badge{margin-bottom:16px;}
+  @media (max-width:700px){
+    .download-grid{grid-template-columns:1fr;}
   }
   .download-card .steps{
     margin-top:24px; text-align:left; font-size:0.86rem; color:var(--muted);
@@ -126,7 +134,7 @@
 </nav>
 
 <header class="hero">
-  <span class="badge">Android · Gratuit · Sans compte</span>
+  <span class="badge">Android & iPhone · Gratuit · Sans compte</span>
   <h1>Reprends le contrôle de ta forme,<br>sans donner tes données.</h1>
   <p>FitLight suit ton poids, tes repas et tes séances de sport — tout reste sur ton téléphone, hors-ligne, sans publicité.</p>
   <div class="hero-ctas">
@@ -213,18 +221,34 @@
 </section>
 
 <section id="telecharger">
-  <h2 class="section-title">Télécharger FitLight</h2>
-  <p class="section-sub">Disponible directement en .apk, sans passer par le Play Store.</p>
-  <div class="download-card">
-    <a class="btn" style="width:100%" href="/api/dl">Télécharger l'application</a>
-    <div class="steps">
-      <h4>Installation sur Android</h4>
-      <ol>
-        <li>Téléchargez le fichier <code>.apk</code> via le bouton ci-dessus.</li>
-        <li>Ouvrez le fichier téléchargé depuis votre téléphone.</li>
-        <li>Si demandé, autorisez l'installation depuis « sources inconnues » pour votre navigateur.</li>
-        <li>Suivez les instructions à l'écran pour terminer l'installation.</li>
-      </ol>
+  <h2 class="section-title">Installer FitLight</h2>
+  <p class="section-sub">Android ou iPhone : choisis l'option qui te convient, aucune des deux ne passe par un store.</p>
+  <div class="download-grid">
+    <div class="download-card">
+      <span class="badge">Android</span>
+      <a class="btn" style="width:100%" href="/api/dl">Télécharger l'APK</a>
+      <div class="steps">
+        <h4>Installation</h4>
+        <ol>
+          <li>Téléchargez le fichier <code>.apk</code> via le bouton ci-dessus.</li>
+          <li>Ouvrez le fichier téléchargé depuis votre téléphone.</li>
+          <li>Si demandé, autorisez l'installation depuis « sources inconnues » pour votre navigateur.</li>
+          <li>Suivez les instructions à l'écran pour terminer l'installation.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="download-card">
+      <span class="badge">iPhone · et Android aussi</span>
+      <a class="btn" style="width:100%" href="https://fitlight-app.vercel.app" target="_blank" rel="noopener">Ouvrir l'application web</a>
+      <div class="steps">
+        <h4>Installation sur iPhone (Safari)</h4>
+        <ol>
+          <li>Ouvre le lien ci-dessus dans <strong>Safari</strong> (obligatoire, pas Chrome).</li>
+          <li>Appuie sur l'icône <strong>Partager</strong> (le carré avec une flèche vers le haut).</li>
+          <li>Choisis <strong>« Sur l'écran d'accueil »</strong>.</li>
+          <li>L'icône FitLight apparaît, et l'app se lance en plein écran, hors-ligne.</li>
+        </ol>
+      </div>
     </div>
   </div>
 </section>
