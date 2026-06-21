@@ -3,18 +3,14 @@ name: Build Android APK
 on:
   push:
     branches: [main]
-    paths:
-      - 'android-app/**'
-      - 'index.html'
-      - 'manifest.webmanifest'
-      - 'sw.js'
-      - 'icon.svg'
-      - '.github/workflows/build-android.yml'
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: android-app
