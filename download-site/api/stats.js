@@ -8,6 +8,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  const count = (await kv.get('downloads_total')) || 0;
+  let count = 0;
+  try {
+    count = (await kv.get('downloads_total')) || 0;
+  } catch (err) {
+    console.error('Compteur KV indisponible :', err);
+  }
   res.status(200).json({ downloads_total: count });
 }
