@@ -310,7 +310,7 @@ Objectif : obtenir ~90 % des bénéfices d'une IA (variété, perso « avec mon 
 | # | Option | Statut | Effort | Note |
 |---|--------|--------|--------|------|
 | 7.1 | Empaquetage Android (Capacitor) → `.apk`/`.aab` installable | ✅ | 🟡 | Build automatisé via **GitHub Actions** (`.github/workflows/build-android.yml`). APK debug livré en Release GitHub taguée `v1.0.0` : https://github.com/Rovel-Coder/fitlight/releases/download/v1.0.0/app-debug.apk |
-| 7.2 | Empaquetage iOS (Capacitor) | ⬜ | 🔴 | Distribution hors App Store très limitée par Apple (TestFlight/compte dev payant requis côté utilisateur) ; écarté pour l'instant, à revoir si besoin réel |
+| 7.2 | Accès iPhone | ✅ | 🟢 | Pas d'empaquetage natif (bloqué par Apple hors App Store) — résolu via la **PWA déjà existante** : app hébergée sur https://fitlight-app.vercel.app, installable depuis Safari (« Sur l'écran d'accueil »), fonctionne aussi hors-ligne |
 | 7.3 | Site web de téléchargement de l'APK — hébergé sur **Vercel** | ✅ | 🟢 | En ligne : https://download-site-ashy.vercel.app — `/api/dl` redirige vers la Release GitHub, captures mobiles réelles intégrées |
 | 7.4 | Compteur de téléchargements — **Vercel KV** | ✅ | 🟢 | Intégration **Redis (Upstash)** créée et liée ; comptage réel vérifié (`/api/stats?token=...` s'incrémente à chaque `/api/dl`) |
 | 7.5 | Synchro directe entre 2 téléphones (P2P, sans stockage serveur) | ⬜ | 🔴 | WebRTC + signalisation légère (code/QR), le serveur de signalisation relaie la mise en relation mais ne stocke jamais les données échangées |
