@@ -4728,8 +4728,9 @@ function renderSuggestionsCal(net, calGoal) {
 // ---------- OpenFoodFacts : recherche & scan (connexion requise) ----------
 const OFF_FIELDS = 'code,product_name,product_name_fr,generic_name,generic_name_fr,categories_tags_fr,brands,nutriments,serving_quantity,countries_tags,lang,unique_scans_n';
 // lc=fr : privilégie les champs/noms en français quand l'API en propose plusieurs variantes.
-// page_size élargi : on récupère plus de candidats pour pouvoir trier nous-mêmes par pertinence France/FR avant de garder le top 20.
-const offSearchUrl = q => `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&fields=${OFF_FIELDS}&lc=fr&page_size=50`;
+// page_size élargi : on récupère beaucoup de candidats pour pouvoir trier/filtrer nous-mêmes
+// (pertinence, France, alphabet latin, doublons) avant de garder le top des résultats.
+const offSearchUrl = q => `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&fields=${OFF_FIELDS}&lc=fr&page_size=100`;
 const offProductUrl = code => `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_FIELDS}`;
 // petit retry pour lisser les coupures réseau passagères
 async function offFetch(url, tries = 2) {
@@ -4764,6 +4765,11 @@ function offNutr(p) {
 }
 function offMsg(html) { document.getElementById('off-results').innerHTML = html; }
 
+// Rejette les noms qui ne sont pas (au moins en partie) en alphabet latin
+// (arabe, cyrillique, CJK, etc.) : illisibles pour un utilisateur francophone.
+function estEnAlphabetLatin(s) {
+  return !/[؀-ۿ֐-׿Ѐ-ӿ぀-ヿ一-鿿가-힯฀-๿]/.test(s);
+}
 // Un produit n'est gardé que s'il correspond vraiment à la recherche (nom ou marque) :
 // chaque mot de la recherche doit se retrouver dans le nom, ou la recherche doit être un mot du nom/de la marque.
 // Sans ce filtre, des produits sans aucun rapport remontaient juste parce qu'ils étaient populaires/français.
@@ -4792,9 +4798,18 @@ async function rechercherAliment(q) {
   try {
     const data = await offFetch(offSearchUrl(q));
     const qNorm = normaliserNom(q);
-    let items = (data.products || []).map(offNutr).filter(p => p.kcal100 > 0 && offCorrespond(p, qNorm));
+    let items = (data.products || []).map(offNutr)
+      .filter(p => p.kcal100 > 0 && estEnAlphabetLatin(p.nom) && estEnAlphabetLatin(p.marque) && offCorrespond(p, qNorm));
+    // Doublons fréquents sur OFF (plusieurs scans du même produit) : on garde le premier par
+    // couple nom+marque normalisé, pour laisser la place à plus de marques différentes.
+    const vus = new Set();
+    items = items.filter(p => {
+      const cle = normaliserNom(p.nom) + '|' + normaliserNom(p.marque || '');
+      if (vus.has(cle)) return false;
+      vus.add(cle); return true;
+    });
     items.sort((a, b) => offScore(b, qNorm) - offScore(a, qNorm));
-    renderResultatsOff(items.slice(0, 20));
+    renderResultatsOff(items.slice(0, 30));
   } catch (e) {
     offMsg(`<p class="empty">Impossible de joindre OpenFoodFacts. Vérifie ta connexion.</p>`);
   }
