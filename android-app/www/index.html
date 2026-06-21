@@ -4727,10 +4727,14 @@ function renderSuggestionsCal(net, calGoal) {
 
 // ---------- OpenFoodFacts : recherche & scan (connexion requise) ----------
 const OFF_FIELDS = 'code,product_name,product_name_fr,generic_name,generic_name_fr,categories_tags_fr,brands,nutriments,serving_quantity,countries_tags,lang,unique_scans_n';
-// lc=fr : privilégie les champs/noms en français quand l'API en propose plusieurs variantes.
-// page_size élargi : on récupère beaucoup de candidats pour pouvoir trier/filtrer nous-mêmes
-// (pertinence, France, alphabet latin, doublons) avant de garder le top des résultats.
-const offSearchUrl = q => `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&fields=${OFF_FIELDS}&lc=fr&page_size=100`;
+// La recherche texte passe par notre propre proxy (fitlight-app.vercel.app/api/off-search), qui
+// relaie côté serveur vers l'API "search-a-licious" d'OpenFoodFacts. L'ancienne API
+// api/v2/search?search_terms= ne filtre quasiment plus rien pour les mots courants (elle renvoie
+// la base entière triée par popularité, peu importe la recherche) ; search-a-licious est bien plus
+// pertinente mais n'envoie pas d'en-tête CORS, donc un appel direct depuis le navigateur échoue —
+// d'où le proxy. URL absolue : nécessaire pour que l'APK (qui charge l'app depuis ses fichiers
+// locaux, pas depuis ce domaine) puisse aussi joindre le proxy.
+const offSearchUrl = q => `https://fitlight-app.vercel.app/api/off-search?q=${encodeURIComponent(q)}`;
 const offProductUrl = code => `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_FIELDS}`;
 // petit retry pour lisser les coupures réseau passagères
 async function offFetch(url, tries = 2) {
@@ -4749,7 +4753,8 @@ function offNutr(p) {
     // nom générique (catégorie) + tags catégories : pour matcher les produits de marque sans le mot
     // générique dans leur nom (ex. "Activia" ne contient pas "yaourt", mais son generic_name si).
     generique: [p.generic_name_fr, p.generic_name, ...(p.categories_tags_fr || [])].filter(Boolean).join(' '),
-    marque: (p.brands || '').split(',')[0].trim(),
+    // brands : chaîne "A,B" sur l'API v2/product, tableau ["A","B"] sur search-a-licious.
+    marque: (Array.isArray(p.brands) ? (p.brands[0] || '') : (p.brands || '').split(',')[0]).trim(),
     kcal100: Math.round(n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0),
     prot100: Math.round((n.proteins_100g ?? 0) * 10) / 10,
     gluc100: Math.round((n.carbohydrates_100g ?? 0) * 10) / 10,
@@ -4811,7 +4816,7 @@ async function rechercherAliment(q) {
   try {
     const data = await offFetch(offSearchUrl(q));
     const qNorm = normaliserNom(q);
-    let items = (data.products || []).map(offNutr)
+    let items = (data.hits || []).map(offNutr)
       .filter(p => p.kcal100 > 0 && estEnAlphabetLatin(p.nom) && estEnAlphabetLatin(p.marque) && offCorrespond(p, qNorm));
     // Doublons fréquents sur OFF (plusieurs scans du même produit) : on garde le premier par
     // couple nom+marque normalisé, pour laisser la place à plus de marques différentes.
