@@ -148,13 +148,17 @@
   <div><strong>0</strong>Compte requis</div>
   <div><strong>100%</strong>Hors-ligne</div>
   <div><strong>6</strong>Espaces complets</div>
-  <div><strong id="fact-downloads">—</strong>Téléchargements</div>
+  <div><strong id="fact-downloads">—</strong>Téléchargements APK</div>
+  <div><strong id="fact-webapp">—</strong>Ouvertures app web</div>
 </div>
 
 <script>
   fetch('/api/public-stats')
     .then(r => r.json())
-    .then(d => { document.getElementById('fact-downloads').textContent = d.downloads_total; })
+    .then(d => {
+      document.getElementById('fact-downloads').textContent = d.downloads_total;
+      document.getElementById('fact-webapp').textContent = d.webapp_opens;
+    })
     .catch(() => {});
 </script>
 
@@ -239,7 +243,7 @@
     </div>
     <div class="download-card">
       <span class="badge">iPhone & Android · App web</span>
-      <a class="btn" style="width:100%" href="https://fitlight-app.vercel.app" target="_blank" rel="noopener">Ouvrir l'application web</a>
+      <a class="btn" style="width:100%" href="/api/open-webapp" target="_blank" rel="noopener">Ouvrir l'application web</a>
       <div class="steps">
         <h4>Sur iPhone (Safari)</h4>
         <ol>
