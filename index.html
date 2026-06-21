@@ -4761,17 +4761,27 @@ function offNutr(p) {
 }
 function offMsg(html) { document.getElementById('off-results').innerHTML = html; }
 
-// Score de pertinence : priorité aux produits dispo en France / nommés en français,
-// puis aux noms qui correspondent le mieux à la recherche, puis à la popularité (nb de scans OFF).
+// Un produit n'est gardé que s'il correspond vraiment à la recherche (nom ou marque) :
+// chaque mot de la recherche doit se retrouver dans le nom, ou la recherche doit être un mot du nom/de la marque.
+// Sans ce filtre, des produits sans aucun rapport remontaient juste parce qu'ils étaient populaires/français.
+function offCorrespond(p, qNorm) {
+  const nomNorm = normaliserNom(p.nom);
+  const marqueNorm = normaliserNom(p.marque || '');
+  const motsQ = qNorm.split(' ').filter(Boolean);
+  if (motsQ.every(m => nomNorm.includes(m))) return true;
+  if (marqueNorm && motsQ.every(m => marqueNorm.includes(m))) return true;
+  return false;
+}
+// Score de pertinence, appliqué uniquement aux produits déjà jugés correspondants :
+// priorité à la correspondance exacte du nom, puis dispo en France / nommé en français, puis popularité (nb de scans OFF).
 function offScore(p, qNorm) {
   const nomNorm = normaliserNom(p.nom);
   let s = 0;
-  if (p.enFrance) s += 100;
-  if (p.enFrancais) s += 50;
-  if (nomNorm === qNorm) s += 40;
-  else if (nomNorm.startsWith(qNorm)) s += 25;
-  else if (nomNorm.includes(' ' + qNorm)) s += 15;
-  s += Math.min(20, Math.log10(p.popularite + 1) * 8);
+  if (nomNorm === qNorm) s += 60;
+  else if (nomNorm.startsWith(qNorm)) s += 35;
+  if (p.enFrance) s += 20;
+  if (p.enFrancais) s += 10;
+  s += Math.min(15, Math.log10(p.popularite + 1) * 6);
   return s;
 }
 async function rechercherAliment(q) {
@@ -4779,7 +4789,7 @@ async function rechercherAliment(q) {
   try {
     const data = await offFetch(offSearchUrl(q));
     const qNorm = normaliserNom(q);
-    const items = (data.products || []).map(offNutr).filter(p => p.kcal100 > 0);
+    let items = (data.products || []).map(offNutr).filter(p => p.kcal100 > 0 && offCorrespond(p, qNorm));
     items.sort((a, b) => offScore(b, qNorm) - offScore(a, qNorm));
     renderResultatsOff(items.slice(0, 20));
   } catch (e) {

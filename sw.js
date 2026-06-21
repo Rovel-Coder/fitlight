@@ -2,7 +2,7 @@
 // Stratégie : stale-while-revalidate. On sert depuis le cache immédiatement,
 // et on met le cache à jour en arrière-plan pour la prochaine ouverture.
 
-const CACHE = 'fitlight-v35';
+const CACHE = 'fitlight-v36';
 const ASSETS = [
   './',
   './index.html',
