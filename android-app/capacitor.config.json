@@ -1,0 +1,8 @@
+{
+  "appId": "com.fitlight.app",
+  "appName": "FitLight",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  }
+}

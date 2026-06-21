@@ -302,6 +302,24 @@ Objectif : obtenir ~90 % des bénéfices d'une IA (variété, perso « avec mon 
 
 ---
 
+# 📦 ROADMAP v7 — distribution native & partage entre utilisateurs (cadrée le 2026-06-21, à implémenter)
+
+> **Cadrage validé :** pas de comptes utilisateurs, pas de base de données centrale, pas de stockage serveur des données perso.
+> **Hébergement du site de téléchargement + compteur (décidé 2026-06-21) : Vercel** (statique, gratuit, HTTPS/CDN automatiques) plutôt que Raspberry Pi — évite d'exposer le réseau domestique. Le Pi reste disponible pour d'autres usages perso.
+
+| # | Option | Statut | Effort | Note |
+|---|--------|--------|--------|------|
+| 7.1 | Empaquetage Android (Capacitor) → `.apk`/`.aab` installable | 🟡 | 🟡 | Projet Capacitor scaffoldé dans `android-app/` ; compilation déléguée à **GitHub Actions** (`.github/workflows/build-android.yml`, pas de SDK Android local) — reste à pousser/déclencher et vérifier l'APK généré |
+| 7.2 | Empaquetage iOS (Capacitor) | ⬜ | 🔴 | Distribution hors App Store très limitée par Apple (TestFlight/compte dev payant requis côté utilisateur) ; écarté pour l'instant, à revoir si besoin réel |
+| 7.3 | Site web de téléchargement de l'APK — hébergé sur **Vercel** | 🟡 | 🟢 | Page de présentation faite (`download-site/`, captures mobiles intégrées) ; lien `/api/dl` pointera vers la Release GitHub une fois 7.1 livré |
+| 7.4 | Compteur de téléchargements — **Vercel KV** | ⬜ | 🟢 | Vercel étant stateless, le compteur a besoin d'un mini-stockage clé-valeur (palier gratuit Vercel KV) ; ne stocke qu'un entier, aucune donnée perso |
+| 7.5 | Synchro directe entre 2 téléphones (P2P, sans stockage serveur) | ⬜ | 🔴 | WebRTC + signalisation légère (code/QR), le serveur de signalisation relaie la mise en relation mais ne stocke jamais les données échangées |
+| 7.6 | Modernisation visuelle / attractivité | ⬜ | — | Périmètre à préciser séparément une fois 7.1-7.5 cadrés |
+
+**Écarté pour cette roadmap :** comptes utilisateurs, sync cloud centralisée, tout stockage serveur des données de santé/poids/repas.
+
+---
+
 ## ✅ ROADMAP v2 TERMINÉE (2026-06-08)
 Les 6 phases / 8 fonctionnalités v2 sont implémentées et vérifiées. SW à `fitlight-v20`.
 
