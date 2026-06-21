@@ -449,6 +449,13 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); font-s
 .fast-stats { display: flex; justify-content: center; gap: 20px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
 .fast-stats b { color: var(--text); }
 
+.cal-confirm:empty { display: none; }
+.cal-confirm {
+  margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--primary); font-size: 13px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+
 /* ---------- Ajout rapide (favoris / récents) ---------- */
 .quick-add { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .quick-chip {
@@ -1156,6 +1163,7 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); font-s
             <button class="btn primary" id="btn-add-conso">+ Consommé</button>
             <button class="btn ghost" id="btn-add-burn">+ Brûlé</button>
           </div>
+          <div id="cal-confirm-ajout" class="cal-confirm"></div>
         </div>
         <div class="food-search">
           <h3>🔎 Rechercher un aliment</h3>
@@ -4449,6 +4457,19 @@ function ajouterDepuisFormulaire(type) {
   } : {};
   ajouterJournal(nom, val, type, extra);
   ['input-cal-nom', 'input-cal-val', 'input-cal-prot', 'input-cal-gluc', 'input-cal-lip'].forEach(id => document.getElementById(id).value = '');
+  confirmerAjoutAvecAnnulation(nom);
+}
+// Confirmation immédiate après ajout manuel, avec un "Annuler" qui retire l'entrée qu'on vient de créer
+// (sans avoir à aller chercher le bouton ✕ dans le sous-onglet Journal).
+function confirmerAjoutAvecAnnulation(nom) {
+  const box = document.getElementById('cal-confirm-ajout');
+  const index = (U().journal[calDate] || []).length - 1;
+  box.innerHTML = `<span>✅ « ${nom} » ajouté.</span> <button class="btn small" id="cal-confirm-annuler">Annuler</button>`;
+  document.getElementById('cal-confirm-annuler').addEventListener('click', () => {
+    supprimerJournal(index);
+    box.innerHTML = '';
+  });
+  setTimeout(() => { if (document.getElementById('cal-confirm-ajout')) box.innerHTML = ''; }, 6000);
 }
 function ajouterJournal(nom, kcal, type, extra = {}) {
   const journal = U().journal;
@@ -4705,8 +4726,10 @@ function renderSuggestionsCal(net, calGoal) {
 }
 
 // ---------- OpenFoodFacts : recherche & scan (connexion requise) ----------
-const OFF_FIELDS = 'code,product_name,product_name_fr,generic_name,brands,nutriments,serving_quantity';
-const offSearchUrl = q => `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&fields=${OFF_FIELDS}&page_size=20`;
+const OFF_FIELDS = 'code,product_name,product_name_fr,generic_name,brands,nutriments,serving_quantity,countries_tags,lang,unique_scans_n';
+// lc=fr : privilégie les champs/noms en français quand l'API en propose plusieurs variantes.
+// page_size élargi : on récupère plus de candidats pour pouvoir trier nous-mêmes par pertinence France/FR avant de garder le top 20.
+const offSearchUrl = q => `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&fields=${OFF_FIELDS}&lc=fr&page_size=50`;
 const offProductUrl = code => `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_FIELDS}`;
 // petit retry pour lisser les coupures réseau passagères
 async function offFetch(url, tries = 2) {
@@ -4731,15 +4754,34 @@ function offNutr(p) {
     suc100: n.sugars_100g != null ? Math.round(n.sugars_100g * 10) / 10 : null,
     sod100: sod100 != null ? Math.round(sod100) : null,
     portion: p.serving_quantity ? parseFloat(p.serving_quantity) : null,
+    enFrance: (p.countries_tags || []).includes('en:france'),
+    enFrancais: !!p.product_name_fr || p.lang === 'fr',
+    popularite: p.unique_scans_n || 0,
   };
 }
 function offMsg(html) { document.getElementById('off-results').innerHTML = html; }
 
+// Score de pertinence : priorité aux produits dispo en France / nommés en français,
+// puis aux noms qui correspondent le mieux à la recherche, puis à la popularité (nb de scans OFF).
+function offScore(p, qNorm) {
+  const nomNorm = normaliserNom(p.nom);
+  let s = 0;
+  if (p.enFrance) s += 100;
+  if (p.enFrancais) s += 50;
+  if (nomNorm === qNorm) s += 40;
+  else if (nomNorm.startsWith(qNorm)) s += 25;
+  else if (nomNorm.includes(' ' + qNorm)) s += 15;
+  s += Math.min(20, Math.log10(p.popularite + 1) * 8);
+  return s;
+}
 async function rechercherAliment(q) {
   offMsg(`<p class="desc">Recherche en cours…</p>`);
   try {
     const data = await offFetch(offSearchUrl(q));
-    renderResultatsOff((data.products || []).map(offNutr).filter(p => p.kcal100 > 0));
+    const qNorm = normaliserNom(q);
+    const items = (data.products || []).map(offNutr).filter(p => p.kcal100 > 0);
+    items.sort((a, b) => offScore(b, qNorm) - offScore(a, qNorm));
+    renderResultatsOff(items.slice(0, 20));
   } catch (e) {
     offMsg(`<p class="empty">Impossible de joindre OpenFoodFacts. Vérifie ta connexion.</p>`);
   }
@@ -4760,7 +4802,7 @@ function renderResultatsOff(items) {
   box.innerHTML = items.map((p, i) => `
     <div class="off-item" data-i="${i}">
       <div class="off-info">
-        <span class="off-name">${p.nom}${p.marque ? ` <span class="off-brand">${p.marque}</span>` : ''}</span>
+        <span class="off-name">${p.enFrance ? '🇫🇷 ' : ''}${p.nom}${p.marque ? ` <span class="off-brand">${p.marque}</span>` : ''}</span>
         <span class="off-macros">${p.kcal100} kcal/100g · P${p.prot100} G${p.gluc100} L${p.lip100}</span>
       </div>
       <div class="off-add">
