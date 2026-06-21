@@ -16,7 +16,22 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Clé de debug fixe et committée (debug.keystore) : sans ça, Gradle génère une clé
+    // aléatoire à chaque machine de build. Sur GitHub Actions, chaque run a une machine
+    // neuve -> chaque APK aurait une signature différente -> impossible de mettre à jour
+    // l'app en place sur un téléphone sans désinstaller (et donc perdre les données).
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
