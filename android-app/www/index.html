@@ -4726,7 +4726,7 @@ function renderSuggestionsCal(net, calGoal) {
 }
 
 // ---------- OpenFoodFacts : recherche & scan (connexion requise) ----------
-const OFF_FIELDS = 'code,product_name,product_name_fr,generic_name,brands,nutriments,serving_quantity,countries_tags,lang,unique_scans_n';
+const OFF_FIELDS = 'code,product_name,product_name_fr,generic_name,generic_name_fr,categories_tags_fr,brands,nutriments,serving_quantity,countries_tags,lang,unique_scans_n';
 // lc=fr : privilégie les champs/noms en français quand l'API en propose plusieurs variantes.
 // page_size élargi : on récupère plus de candidats pour pouvoir trier nous-mêmes par pertinence France/FR avant de garder le top 20.
 const offSearchUrl = q => `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(q)}&fields=${OFF_FIELDS}&lc=fr&page_size=50`;
@@ -4744,7 +4744,10 @@ function offNutr(p) {
   // sodium en mg/100g : depuis sodium_100g (g) sinon depuis salt_100g (g) / 2,5
   let sod100 = n.sodium_100g != null ? n.sodium_100g * 1000 : (n.salt_100g != null ? n.salt_100g / 2.5 * 1000 : null);
   return {
-    nom: p.product_name_fr || p.product_name || p.generic_name || 'Produit',
+    nom: p.product_name_fr || p.product_name || p.generic_name_fr || p.generic_name || 'Produit',
+    // nom générique (catégorie) + tags catégories : pour matcher les produits de marque sans le mot
+    // générique dans leur nom (ex. "Activia" ne contient pas "yaourt", mais son generic_name si).
+    generique: [p.generic_name_fr, p.generic_name, ...(p.categories_tags_fr || [])].filter(Boolean).join(' '),
     marque: (p.brands || '').split(',')[0].trim(),
     kcal100: Math.round(n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0),
     prot100: Math.round((n.proteins_100g ?? 0) * 10) / 10,
@@ -4767,10 +4770,10 @@ function offMsg(html) { document.getElementById('off-results').innerHTML = html;
 function offCorrespond(p, qNorm) {
   const nomNorm = normaliserNom(p.nom);
   const marqueNorm = normaliserNom(p.marque || '');
+  const genNorm = normaliserNom(p.generique || '');
+  const corpus = nomNorm + ' ' + marqueNorm + ' ' + genNorm;
   const motsQ = qNorm.split(' ').filter(Boolean);
-  if (motsQ.every(m => nomNorm.includes(m))) return true;
-  if (marqueNorm && motsQ.every(m => marqueNorm.includes(m))) return true;
-  return false;
+  return motsQ.every(m => corpus.includes(m));
 }
 // Score de pertinence, appliqué uniquement aux produits déjà jugés correspondants :
 // priorité à la correspondance exacte du nom, puis dispo en France / nommé en français, puis popularité (nb de scans OFF).
