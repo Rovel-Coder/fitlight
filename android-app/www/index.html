@@ -773,6 +773,12 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); font-s
   #report-overlay { display: block !important; }
   @page { margin: 12mm; }
 }
+
+/* ---------- Bannière rappel de sauvegarde ---------- */
+#bandeau-sauvegarde { display: none; background: var(--bg-soft); border-bottom: 1px solid var(--border); padding: 10px 16px; }
+#bandeau-sauvegarde.show { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#bandeau-sauvegarde .bs-txt { flex: 1 1 220px; font-size: 13px; color: var(--text-muted, #9aa7b5); }
+#bandeau-sauvegarde .bs-actions { display: flex; gap: 8px; align-items: center; }
   </style>
 </head>
 <body>
@@ -792,6 +798,14 @@ details summary { cursor: pointer; font-weight: 600; color: var(--muted); font-s
       <button class="btn small" id="btn-add-user" title="Ajouter une personne"><span aria-hidden="true">+</span><span class="bu-txt">&nbsp;Personne</span></button>
     </div>
   </header>
+
+  <div id="bandeau-sauvegarde">
+    <span class="bs-txt">💾 Tes données ne sont stockées que sur cet appareil. Pense à exporter une sauvegarde régulièrement.</span>
+    <span class="bs-actions">
+      <button class="btn small" id="bs-exporter">Exporter maintenant</button>
+      <button class="btn small" id="bs-plus-tard">Plus tard</button>
+    </span>
+  </div>
 
   <main>
     <!-- ===================== ACCUEIL ===================== -->
@@ -4005,7 +4019,37 @@ function exporterDonnees() {
   a.href = url; a.download = 'fitlight-sauvegarde-' + todayKey() + '.json';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+  STORE.set('derniereSauvegarde', todayKey());
+  cacherBandeauSauvegarde();
 }
+
+// ----- Rappel périodique de sauvegarde (les données ne vivent que dans ce localStorage) -----
+const JOURS_ENTRE_RAPPELS_SAUVEGARDE = 14;
+function joursDepuis(dateStr) {
+  if (!dateStr) return Infinity;
+  return Math.floor((new Date(todayKey()) - new Date(dateStr)) / 86400000);
+}
+function donneesAExporter() {
+  return etat.utilisateurs.some(u => u.poids.length || Object.keys(u.journal).length || (u.seances || []).length);
+}
+function cacherBandeauSauvegarde() {
+  document.getElementById('bandeau-sauvegarde').classList.remove('show');
+}
+function verifierRappelSauvegarde() {
+  if (!donneesAExporter()) return;
+  const derniere = STORE.get('derniereSauvegarde', null);
+  const snoozeJusqua = STORE.get('snoozeSauvegarde', null);
+  if (snoozeJusqua && joursDepuis(snoozeJusqua) < 0) return; // snooze toujours actif (date future)
+  if (joursDepuis(derniere) >= JOURS_ENTRE_RAPPELS_SAUVEGARDE) {
+    document.getElementById('bandeau-sauvegarde').classList.add('show');
+  }
+}
+document.getElementById('bs-exporter').addEventListener('click', exporterDonnees);
+document.getElementById('bs-plus-tard').addEventListener('click', () => {
+  const dans7j = new Date(); dans7j.setDate(dans7j.getDate() + 7);
+  STORE.set('snoozeSauvegarde', dans7j.toISOString().slice(0, 10));
+  cacherBandeauSauvegarde();
+});
 function importerDonnees(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -5065,6 +5109,7 @@ window.addEventListener('resize', () => {
 });
 // Premier lancement : si le profil n'est pas renseigné, on démarre le parcours d'accueil
 if (profilIncomplet(U())) lancerOnboarding(U(), false);
+verifierRappelSauvegarde();
 
 // ---------- PWA : enregistrement du service worker (offline + installable) ----------
 if ('serviceWorker' in navigator) {
