@@ -140,7 +140,15 @@
   <div><strong>0</strong>Compte requis</div>
   <div><strong>100%</strong>Hors-ligne</div>
   <div><strong>6</strong>Espaces complets</div>
+  <div><strong id="fact-downloads">—</strong>Téléchargements</div>
 </div>
+
+<script>
+  fetch('/api/public-stats')
+    .then(r => r.json())
+    .then(d => { document.getElementById('fact-downloads').textContent = d.downloads_total; })
+    .catch(() => {});
+</script>
 
 <section id="fonctionnalites">
   <h2 class="section-title">Tout ce qu'il faut, rien de superflu</h2>
